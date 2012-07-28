@@ -1,51 +1,57 @@
 /**
- * Dependencie(s): view.js
- * TO DO:
- * - add tooltip to controls to display rules?
- */
-
-/**
  * VALIDATOR
+ * A simple, easy to use jQuery based form validator
  * Author: Harry Lee
+ * Updated: 2012-07-28
  * 
- * Validator is a client-side validation framework, giving programmers the ability to validate 
- * fields with regular expressions that work on individual controls and table controls. 
- * Failed validation(s) would prevent the page from submission and provide error messages 
- * at the top of the coach.
+ * Validator is a client-side validation framework, giving developers the ability to validate 
+ * fields with functions or regular expressions
+ * Failed validation(s) would prevent the page from submission and provide error messages.
+ * 
+ * Requirements:
+ * -jQuery
+ * -jQuery-ui with highlight effect
  * 
  * Steps to use:
  * 1) include the neccessary JS and CSS files
- * 2) add rules
- * 3) call validate
+ * 2) insert <div id="notifications"></div> to your HTML for where you want errors to display
+ * 3) call init()
+ * 4) add rules
+ * 5) call validate()
  * 
  * Example:
  *  <script src="js/jquery-1.7.2.min.js"></script>
     <script src="js/jquery-ui-1.8.20.custom.min.js"></script>
-    <script src="js/lib.js"></script>
-    <script src="js/view.js"></script>
     <script src="js/validator.js"></script>
     <link rel="stylesheet" type="text/css" href="css/validator.css"/>
-    <link rel="stylesheet" type="text/css" href="css/core.css"/>
     <script language="JavaScript">
         $(document).ready( function() {
-            Validator.textField('name', 'Name', 'required');
-            Validator.textField('name', 'Name', 'negative');
-            Validator.textField('email', 'Email', 'email');
-            Validator.radioButtons('age', 'Under-age', 'required');
+            Validator.init();
+            Validator.text('name', 'Name', 'required');
+            Validator.text('name', 'Name', 'negative');
+            Validator.text('email', 'Email', 'email');
+            Validator.radio('age', 'Under-age', 'required');
             Validator.select('category', 'Categories', 'required');
-            Validator.checkboxes('interests', 'Interests', 'required');
+            Validator.checkbox('interests', 'Interests', 'required');
         });
     </script>
     
  */
 function Validator() {}
 
+/* BEGIN: Default Configurations (Configure in Validator.init method) */
 Validator.ALLOW_COMMA_IN_NUMBERS = true;
+Validator.NOTIFICATION_AREA = null;
+/* END: Default Configurations */
+
+/* BEGIN: Auxillary Variables */
 Validator.validations = new Array();
 Validator.failedControls = new Array();
 Validator.errorBackgroundInterval = null;
 Validator.errorBackgroundToggle = true;
+/* END: Auxillary Variables */
 
+/* BEGIN: Rules */
 Validator.rules = {
     'required': {
         'text': '{label} is required.',
@@ -157,14 +163,27 @@ Validator.rules = {
         'logic': /^[+]?[\d]{5}$/
     }
 }
+/* END: Rules */
 
-
+/* BEGIN: Data types */
 Validator.Error = function(validation, text) {
     this.validation = validation;
     this.text = text;
 }
+/* END: Data types */
 
+/**
+ * Initialize/change configurations. This method must be called when the page loads
+ */
+Validator.init = function() {
+    Validator.ALLOW_COMMA_IN_NUMBERS = true;
+    Validator.NOTIFICATION_AREA = $('#notifications');
+}
 
+/**
+ * Converts a numerical string to a number
+ * @param {String} value - the string to be converted to a number
+ */
 Validator.number = function(value) {
     var properNum;
     
@@ -184,6 +203,13 @@ Validator.number = function(value) {
     return Number(properNum);
 }
 
+/**
+ * Adds a rule to a text field control
+ * @param {String} id - ID of the control
+ * @param {String} label - Label for the control
+ * @param {String} rule - The name of the rule
+ * @param {ANY_TYPE[]} params - Optional. Array of Strings or numbers as parameters for the rule
+ */
 Validator.text = function(id, label, rule, params) {
     if (typeof params == 'undefined' || params == null) {
         params = new Array();
@@ -198,6 +224,13 @@ Validator.text = function(id, label, rule, params) {
     });
 }
 
+/**
+ * Adds a rule to a select control (i.e. dropdown list). Supports select controls that allow multiple selections. 
+ * @param {String} id - ID of the control
+ * @param {String} label - Label for the control
+ * @param {String} rule - The name of the rule
+ * @param {ANY_TYPE[]} params - Optional. Array of Strings or numbers as parameters for the rule
+ */
 Validator.select = function(id, label, rule, params) {
     if (typeof params == 'undefined' || params == null) {
         params = new Array();
@@ -212,7 +245,13 @@ Validator.select = function(id, label, rule, params) {
     });
 }
 
-
+/**
+ * Adds a rule to a checkbox control group
+ * @param {String} id - ID of any checkbox control in the checkbox group
+ * @param {String} label - Label for the checkbox group
+ * @param {String} rule - The name of the rule
+ * @param {ANY_TYPE[]} params - Optional. Array of Strings or numbers as parameters for the rule
+ */
 Validator.checkbox = function(id, label, rule, params) {
     if (typeof params == 'undefined' || params == null) {
         params = new Array();
@@ -227,6 +266,13 @@ Validator.checkbox = function(id, label, rule, params) {
     });
 }
 
+/**
+ * Adds a rule to a radio button control group
+ * @param {String} id - ID of any radio button control in the radio button group
+ * @param {String} label - Label for the radio button group
+ * @param {String} rule - The name of the rule
+ * @param {ANY_TYPE[]} params - Optional. Array of Strings or numbers as parameters for the rule
+ */
 Validator.radio = function(id, label, rule, params) {
     if (typeof params == 'undefined' || params == null) {
         params = new Array();
@@ -241,11 +287,9 @@ Validator.radio = function(id, label, rule, params) {
     });
 }
 
-
-Validator.errorMessage = function(msg) {
-    View.notification(msg, {highlight: true, addClass: 'v_errorMsg'});
-}
-
+/**
+ * Resets Validator's state. Clear the error messages and error handling.
+ */
 Validator.reset = function() {
     //clear the error messages
     $('.v_errorMsg').remove();
@@ -254,10 +298,14 @@ Validator.reset = function() {
     $('.v_errorField').removeClass('v_errorField');
 }
 
+/**
+ * Method that handles the validation errors. Controls how the errors are displayed. Replace this method if you want errors to be shown differently.
+ * @param {Validator.Error[]} errors - the array holding the validations made from the last validate operation
+ */
 Validator.handleErrors = function(errors) {
     if (errors.length > 0) {
         $('body').animate({
-            scrollTop: View.pageContentTop().position().top
+            scrollTop: Validator.NOTIFICATION_AREA.position().top
         }, 'slow');
     }
     
@@ -269,16 +317,21 @@ Validator.handleErrors = function(errors) {
         var label = validation['label'];
         
         //if control is group of radio buttons or checkboxes, scroll it to the first item of the group
-        text = text.replace(/{label}/g, '<a href="javascript: void(0)" onclick="View.scrollToElement(\'' + id + '\')">' + label + '</a>');
+        text = text.replace(/{label}/g, '<a href="javascript: void(0)" onclick="Validator.scrollToElement(\'' + id + '\')">' + label + '</a>');
         
         //only add class if it's not radio button group or checkboxes
         //if (type != 'checkbox' && type != 'radio')
         $('#' + id).addClass('v_errorField');
         
-        Validator.errorMessage(text);
+        Validator.notification(text, {highlight: true, addClass: 'v_errorMsg'});
     }
 }
 
+/**
+ * Adds a notification to the Notification Area
+ * @param {String} msg - The notification message
+ * @param {options} options - Options for the notification
+ */
 Validator.notificationCount = 0;
 Validator.notification = function(msg, options) {
     if (typeof options == 'undefined' || options == null) {
@@ -287,21 +340,22 @@ Validator.notification = function(msg, options) {
             addClass: null
         };
     }
+    
     //create div
     var $newDiv = $('<div class="notification">');
-    $newDiv.prop('id', 'view_notification_' + View.notificationCount);
+    $newDiv.prop('id', 'view_notification_' + Validator.notificationCount);
     
     if (options['addClass'] != null)
         $newDiv.addClass(options['addClass']);
     
-    View.notificationCount++;
+    Validator.notificationCount++;
     
     //add msg to div
     $newDiv.html( msg );
     
     //prepend div to
     //$('table.controlLayout > tbody > tr:nth-child(3) td.sectionBodyCenterControl:first').prepend( $newDiv );
-    View.pageContentTop().prepend( $newDiv );
+    Validator.NOTIFICATION_AREA.append( $newDiv );
     
     if (options['highlight'])
         $newDiv.effect("highlight", {}, 10000);
@@ -309,6 +363,8 @@ Validator.notification = function(msg, options) {
 
 /**
  * highlight: Highlight the element after scrolling to it
+ * @param {String} elementId - ID of the element to scroll to
+ * @param {options} options - options
  */
 Validator.scrollToElement = function(ctrlId, options) {
     if (typeof options == 'undefined' || options == null) {
@@ -330,6 +386,9 @@ Validator.scrollToElement = function(ctrlId, options) {
     });
 }
 
+/**
+ * Validates the rules. This is the engine, the core of Validator
+ */
 Validator.validate = function() {
     /*
      * - reset
